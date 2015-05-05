@@ -11,7 +11,7 @@ class Implementation
 	public static $_para_name=array();   #store the paranames of tha whole htmls
     public static $_final_name=array();  #no-repeatedly paranames
     public static $para_count=0;         #count the number of pranames
-	//imlemet the protection
+	//imlement the protection
 	public static function implement()
 	{
 	    self::Getdir();          #get the site path from the config file
