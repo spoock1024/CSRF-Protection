@@ -7,17 +7,18 @@ Date:2015/03/18
 class Implementation
 {
 	//store the dir of php programs
-	public static $_site_dir="";     #the path of the site
+	public static $_directory="";        #the path of the directories to be patched
+	public static $_files="";            #the files to be patched
 	public static $_para_name=array();   #store the paranames of tha whole htmls
     public static $_final_name=array();  #no-repeatedly paranames
     public static $para_count=0;         #count the number of pranames
 	//imlement the protection
 	public static function implement()
 	{
-	    self::Getdir();          #get the site path from the config file
+	    self::Getdir();          #get the path of the directories and files to be patched from the config file
         self::handlefiles();     #patch the html and the php
         self::generate_globalparameter_php();  #generate the php script for assignment of rand_paranames
-        self::copy_file();
+       // self::copy_file();
 	}
 	//get the configured information from config.ini
 	public static function Getdir()
@@ -28,15 +29,15 @@ class Implementation
 		    die("The configuration file does not exists!"); 
 		}
 		$dir=parse_ini_file($configfile,true);
-		self::$_site_dir=$dir['sitedir'];
+		self::$_directory=$dir['sitedir'];
 	}
 	
 	//handle the files needed to be patched
 	public static function handlefiles()
 	{
-	    foreach(self::$_site_dir as $key=>$value)
+	    foreach(self::$_directory as $key=>$value)
 		{
-		    if($value!="")
+		    if($value!=""&&is_dir($value))
 			{
 			    //traverse the dir
                 self::traversedir($value);
@@ -51,8 +52,6 @@ class Implementation
 	//tranverse the dir
 	public static function traversedir($dir)
 	{
-	    if($dir=="/var/www/discuz1/upload/source/class")
-	    	return;
 	    $subdir=scandir($dir);
 		foreach($subdir as $key=>$value)
 		{
@@ -69,11 +68,11 @@ class Implementation
 					switch($postfix)
 					{   //patch the two different files
 					    case ".php":
-					        self::patch_include($path); //add the required scripts
 						    self::patchphpfile($path);  //patch the POST[xxx]
 							break;
 						case ".htm":
 						    self::patchhtmlfile($path);  //patch the html template
+						    //collect the related parameter names
                             foreach(self::$_para_name as $key=>$value)self::$_final_name[self::$para_count++]=$value;
 						    break;
 						default:
@@ -85,7 +84,7 @@ class Implementation
 	}
 	
 	/*patch the php file with csrf randomization protection
-	  replace all the http request keyword:$_REQUEST[]\$_GET[]\$_POST[]
+	  replace all the http request keyword:$_POST[]
 	  with the packaged methods
     */
 	public static function patchphpfile($path)
@@ -123,6 +122,7 @@ class Implementation
             print_r(self::$_para_name);
             echo '<br>';
             $pattern1="/(<(?:input|textarea|select).*name=)(\")([A-Za-z0-9_]+?\".*?>)/";
+            //Tips:developers may be required to modify this code according to  specific template engine
             $file_replace=preg_replace($pattern1,"\${1}\"\$rand_\${3}",$file_text);
             rewind($myfile);
             fwrite($myfile,$file_replace);
@@ -133,6 +133,10 @@ class Implementation
              echo "Not found in: ".$path.'<br>';
         }   
     }
+
+/*
+the following functions are used for testing on DISCUZ 3.X
+*/
     /*generate a script for assignment of rand_parameters*/
     public static function generate_globalparameter_php()
     {
