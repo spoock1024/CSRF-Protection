@@ -22,7 +22,17 @@ class CSRFP_Randomization
 		    while($r==60||$r==47)$r=rand(33,126);
 		    $key.=chr($r);
 		}
-		return $key;
+		$aes256Key = hash("SHA256", $key, true);
+		return $aes256Key;
+	}
+
+	public static function GenerateVi()
+	{
+		// for good entropy (for MCRYPT_RAND)
+		srand((double) microtime() * 1000000);
+		// generate random iv
+		$iv = mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC), MCRYPT_RAND);
+		return $iv;
 	}
 	
 	//function to set session value for"randomkey"	
@@ -35,6 +45,7 @@ class CSRFP_Randomization
         if(!isset($_SESSION["randomkey"]))
         {
 		    $_SESSION["randomkey"]=self::GenerateRandomkey();
+		    $_SESSION['iv'] = self::GenerateVi();
         }
 	}
 	//function to randomize the parameter name with a random key
@@ -52,6 +63,34 @@ class CSRFP_Randomization
 	    $plainstr=$parameter.$_SESSION["randomkey"];
 		//using md5 algorithm
 		return md5($plainstr);
+	}
+
+	public static function Encrypt($parameter)
+	{
+		if(!isset($_SESSION)) 
+		{	
+			session_start();
+		}	
+		if(!isset($_SESSION['randomkey']))
+		{	
+			$_SESSION['randomkey'] = self::GenerateRandomkey();
+			$_SESSION['iv'] = self::GenerateVi();
+		}
+		return rtrim(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $sSecretKey, $sValue, MCRYPT_MODE_CBC, $iv)), "\0\3");
+	}
+
+	public static function Decrypt()
+	{
+		if(!isset($_SESSION)) 
+		{	
+			session_start();
+		}	
+		if(!isset($_SESSION['randomkey']))
+		{	
+			$_SESSION['randomkey'] = self::GenerateRandomkey();
+			$_SESSION['iv'] = self::GenerateVi();
+		}
+		return rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $sSecretKey, base64_decode($sValue), MCRYPT_MODE_CBC, $iv), "\0\3");
 	}
 }
 ?>
